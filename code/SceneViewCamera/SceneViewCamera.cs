@@ -5,23 +5,33 @@ using System.Collections;
 public class SceneViewCamera : MonoBehaviour
 {
 	[SerializeField, Range(0.1f, 10f)]
-	private float wheelSpeed = 2f;
-	
-	[SerializeField, Range(0.1f, 10f)]
-	private float moveSpeed = 0.5f;
+	private float wheelRatio = 1.5f;
 	
 	[SerializeField, Range(0.1f, 10f)]
 	private float rotateSpeed = 0.5f;
 	
 	private Vector3 preMousePos;
-	private Vector3 vc = new Vector3 (0, 0, 0);
-	
+	public float dstToLook = 5;
+
+	private Camera cam;
+
 	private void Update()
 	{
 		MouseUpdate();
-		return;
 	}
 	
+	private void Awake()
+	{
+		cam = GetComponent<Camera>();
+	}
+
+	private Vector3 getLookPos()
+	{
+		Vector3 p = transform.position;
+		Vector3 f = transform.forward;
+		return p + f * dstToLook;
+	}
+
 	private void MouseUpdate()
 	{
 		float scrollWheel = Input.GetAxis("Mouse ScrollWheel");
@@ -38,9 +48,12 @@ public class SceneViewCamera : MonoBehaviour
 	
 	private void MouseWheel(float delta)
 	{
-		transform.position += transform.forward * delta * wheelSpeed;
+		float dstAfter = dstToLook * Mathf.Pow(wheelRatio, delta);
+		float mv = dstToLook - dstAfter;
+		transform.position += transform.forward * mv;
+		dstToLook = dstAfter;
 	}
-	
+
 	private void MouseDrag(Vector3 mousePos)
 	{
 		Vector3 diff = mousePos - preMousePos;
@@ -49,9 +62,10 @@ public class SceneViewCamera : MonoBehaviour
 			return;
 		
 		if (Input.GetMouseButton (2)) {
+			float fov = cam.fieldOfView;
+			float moveSpeed = Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad) * dstToLook;
 			Vector3 cp = transform.position;
 			transform.Translate (-diff * Time.deltaTime * moveSpeed);
-			vc += transform.position - cp;
 		} else if (Input.GetMouseButton (0)) {
 			CameraRotate (new Vector2 (-diff.y, diff.x) * rotateSpeed);
 		}
@@ -61,7 +75,8 @@ public class SceneViewCamera : MonoBehaviour
 	
 	public void CameraRotate(Vector2 angle)
 	{
-		transform.RotateAround(vc, transform.right, angle.x);
-		transform.RotateAround(vc, Vector3.up, angle.y);
+		Vector3 look = getLookPos();
+		transform.RotateAround(look, transform.right, angle.x);
+		transform.RotateAround(look, Vector3.up, angle.y);
 	}
 }
